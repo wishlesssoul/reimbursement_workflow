@@ -1050,7 +1050,7 @@ This design solves the business pain described in the requirement while staying 
 
 ## 23. AI usage note
 
-This technical design was generated based on the written requirements and was checked against the explicit business constraints described in [requirement.docx](../requirement.docx). The design emphasizes the requirement-driven workflow and avoids assumptions outside the scope of the exercise.
+This technical design was generated based on the written requirements based on the requirement document and was checked against the explicit business constraints mentioned by the user after multiple iterations. The design emphasizes the requirement-driven workflow and avoids assumptions outside the scope of the exercise. 
 
 ---
 
