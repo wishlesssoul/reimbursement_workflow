@@ -1,0 +1,29 @@
+# Dependencies and local environments
+**/node_modules/
+.venv/
+
+# Local secrets and runtime configuration
+.env
+.env.*
+!.env.example
+
+# Local databases and SQLite sidecars
+backend/data/*.db
+backend/data/*.db-*
+
+# Generated frontend and TypeScript output
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+frontend/*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
+
+# Workspace and operating-system noise
+.vscode/
+.DS_Store
+Thumbs.db
+npm-debug.log*
+
+# Root npm lock was generated without a root package.json
+/package-lock.json
