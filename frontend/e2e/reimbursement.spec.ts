@@ -306,6 +306,7 @@ test('reviewer can generate a rules-based advisory without changing a request', 
   await expect(advisoryRegion.locator('.advisory-results')).toContainText('python-rules-v1');
   await expect(advisoryRegion).toContainText('reviewer makes the decision');
   await expect(reviewerPage.getByRole('button', { name: 'Start review' })).toBeVisible();
+  await reviewerPage.screenshot({ path: screenshotPath('11-reviewer-advisory-agent'), fullPage: true });
 
   const afterResponse = await request.get(`/api/reviewer/requests/${newRequest.id}`, { headers: reviewerAuth });
   const after = (await afterResponse.json()).request;
