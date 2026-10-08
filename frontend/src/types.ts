@@ -48,3 +48,19 @@ export interface RequestEvent {
   metadata?: string | null;
   created_at: string;
 }
+
+export interface ReviewAdvisoryResponse {
+  engine: string;
+  generatedAt: string;
+  notice: string;
+  advisory: {
+    summary: string;
+    observations: string[];
+    questions: string[];
+  };
+  possibleDuplicates: Array<{
+    requestReference: string;
+    status: string;
+    reason: string;
+  }>;
+}

@@ -16,6 +16,9 @@ jobs:
           cache-dependency-path: |
             backend/package-lock.json
             frontend/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
       - name: Install backend dependencies
         run: npm ci
         working-directory: backend

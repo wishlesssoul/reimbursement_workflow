@@ -5,6 +5,7 @@ A modular reimbursement workflow demo with a React/TypeScript frontend, Express 
 ## Requirements
 
 - Node.js 22 or later
+- Python 3.10 or later (stdlib only, for the reviewer advisory agent)
 - npm
 
 ## Install
@@ -67,6 +68,7 @@ The full fictional seed set is maintained in [docs/seed-data.md](docs/seed-data.
 - Customers submit reimbursement requests and receive a request reference.
 - Customers view status/history, and reply to a reviewer’s request for more information.
 - Reviewers filter the open queue, start a review, and approve, decline, or request more information with an explanation.
+- Reviewers can generate a read-only Python rules advisory with request observations, verification questions, and possible same-customer duplicates. It never recommends or records a decision.
 - Admins can view the seeded user directory and invoke the seed endpoint. Seed data is loaded automatically on first backend startup; the endpoint does not reset existing data.
 - Duplicate submissions resolve to the existing request. Version checks prevent stale or competing workflow updates.
 
@@ -106,9 +108,11 @@ The backend reads these optional environment variables:
 | `PORT` | `3001` | Backend HTTP port |
 | `DB_PATH` | `./data/reimbursement.db` | SQLite database path, relative to the backend working directory unless absolute |
 | `JWT_SECRET` | `reimbursement-demo-secret` | JWT signing secret; set a private value outside the demo environment |
+| `PYTHON_EXECUTABLE` | `python` | Python executable used by the local advisory agent |
+| `ADVISORY_TIMEOUT_MS` | `10000` | Maximum runtime for one advisory request |
 
 ## POC boundaries
 
-This is a local demo, not a production deployment. It uses SQLite and a five-second in-process read cache; move to PostgreSQL and Redis before scaling across backend processes. Logs are structured JSON written to stdout, but no centralized log sink, tracing, or alerting is configured. CI verifies builds and tests but does not deploy to staging or production. Refresh tokens are stored in browser local storage for this POC; production should use a secure cookie/session design. The optional AI assistant is not implemented and must never make final reimbursement decisions if added.
+This is a local demo, not a production deployment. The advisory agent is a deterministic Python rules engine, not a trained ML model or LLM; its checks are informational and do not replace policy or reviewer judgment. It uses SQLite and a five-second in-process read cache; move to PostgreSQL and Redis before scaling across backend processes. Logs are structured JSON written to stdout, but no centralized log sink, tracing, or alerting is configured. CI verifies builds and tests but does not deploy to staging or production. Refresh tokens are stored in browser local storage for this POC; production should use a secure cookie/session design.
 
 See [docs/technical-design.md](docs/technical-design.md) for the architecture, workflow model, API specification, and implementation status.

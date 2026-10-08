@@ -276,3 +276,42 @@ test('reviewer can decline and admin-only demo seeding is enforced', async ({ br
   await adminContext.close();
   await reviewerContext.close();
 });
+
+test('reviewer can generate a rules-based advisory without changing a request', async ({ browser, request }) => {
+  const customer = await apiLogin(request, 'customer1@example.com');
+  const reviewer = await apiLogin(request, 'reviewer1@example.com');
+  const created = await request.post('/api/requests', {
+    headers: { Authorization: `Bearer ${customer.token}` },
+    data: {
+      customerReference: `PW-ADVISORY-${Date.now()}`,
+      expenseDate: '2026-10-07',
+      amountInr: 1800,
+      description: 'Travel to customer planning meeting in Bengaluru',
+    },
+  });
+  expect(created.status()).toBe(201);
+  const newRequest = (await created.json()).request as { id: string; requestReference: string };
+  const reviewerAuth = { Authorization: `Bearer ${reviewer.token}` };
+  const beforeResponse = await request.get(`/api/reviewer/requests/${newRequest.id}`, { headers: reviewerAuth });
+  const before = (await beforeResponse.json()).request;
+
+  const reviewerContext = await browser.newContext();
+  const reviewerPage = await reviewerContext.newPage();
+  await login(reviewerPage, 'reviewer1@example.com');
+  await reviewerPage.getByRole('button', { name: `${newRequest.requestReference} · New` }).click();
+  const advisoryRegion = reviewerPage.getByRole('region', { name: 'Review advisory' });
+  await expect(advisoryRegion.getByRole('heading', { name: 'Advisory agent' })).toBeVisible();
+  await advisoryRegion.getByRole('button', { name: 'Generate advisory' }).click();
+  await expect(advisoryRegion.locator('.advisory-results')).toContainText(newRequest.requestReference);
+  await expect(advisoryRegion.locator('.advisory-results')).toContainText('python-rules-v1');
+  await expect(advisoryRegion).toContainText('reviewer makes the decision');
+  await expect(reviewerPage.getByRole('button', { name: 'Start review' })).toBeVisible();
+
+  const afterResponse = await request.get(`/api/reviewer/requests/${newRequest.id}`, { headers: reviewerAuth });
+  const after = (await afterResponse.json()).request;
+  expect(after.status).toBe(before.status);
+  expect(after.version).toBe(before.version);
+  expect(after.decisions).toHaveLength(before.decisions.length);
+  expect(after.events).toHaveLength(before.events.length);
+  await reviewerContext.close();
+});

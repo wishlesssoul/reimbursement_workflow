@@ -1,4 +1,4 @@
-import type { AdminUser, User, RequestRecord } from './types';
+import type { AdminUser, User, RequestRecord, ReviewAdvisoryResponse } from './types';
 
 const API_BASE = '/api';
 let refreshInFlight: Promise<boolean> | null = null;
@@ -138,6 +138,12 @@ export async function submitReviewDecision(requestId: string, decision: string, 
   return apiFetch<{ message: string; status: string }>(`/reviewer/requests/${requestId}/review`, {
     method: 'POST',
     body: JSON.stringify({ decision, explanation, version }),
+  });
+}
+
+export async function fetchReviewAdvisory(requestId: string) {
+  return apiFetch<ReviewAdvisoryResponse>(`/reviewer/requests/${encodeURIComponent(requestId)}/advisory`, {
+    method: 'POST',
   });
 }
 

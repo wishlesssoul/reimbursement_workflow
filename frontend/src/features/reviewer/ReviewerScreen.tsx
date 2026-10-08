@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import {
   fetchReviewerQueue,
   fetchReviewerRequest,
+  fetchReviewAdvisory,
   startReviewRequest,
   submitReviewDecision,
 } from '../../api';
-import type { RequestRecord } from '../../types';
+import type { RequestRecord, ReviewAdvisoryResponse } from '../../types';
 import { eventSummary } from '../shared/requestEvents';
 
 interface ReviewerScreenProps {
@@ -20,6 +21,9 @@ export default function ReviewerScreen({ onMessage, refreshKey }: ReviewerScreen
   const [selectedRequest, setSelectedRequest] = useState<RequestRecord | null>(null);
   const [decision, setDecision] = useState('approve');
   const [reviewExplanation, setReviewExplanation] = useState('Looks valid based on documentation.');
+  const [advisory, setAdvisory] = useState<ReviewAdvisoryResponse | null>(null);
+  const [advisoryError, setAdvisoryError] = useState('');
+  const [advisoryLoading, setAdvisoryLoading] = useState(false);
 
   useEffect(() => {
     fetchReviewerQueue(queueStatus || undefined).then(setReviewQueue).catch(() => setReviewQueue([]));
@@ -27,6 +31,8 @@ export default function ReviewerScreen({ onMessage, refreshKey }: ReviewerScreen
 
   async function handleSelectRequest(item: RequestRecord) {
     setSelectedRequestId(item.id);
+    setAdvisory(null);
+    setAdvisoryError('');
     onMessage('');
 
     try {
@@ -34,6 +40,21 @@ export default function ReviewerScreen({ onMessage, refreshKey }: ReviewerScreen
     } catch (error) {
       setSelectedRequest(null);
       onMessage(error instanceof Error ? error.message : 'Request details could not be loaded.');
+    }
+  }
+
+  async function handleGenerateAdvisory() {
+    if (!selectedRequest) return;
+    setAdvisory(null);
+    setAdvisoryError('');
+    setAdvisoryLoading(true);
+
+    try {
+      setAdvisory(await fetchReviewAdvisory(selectedRequest.id));
+    } catch (error) {
+      setAdvisoryError(error instanceof Error ? error.message : 'The advisory could not be generated.');
+    } finally {
+      setAdvisoryLoading(false);
     }
   }
 
@@ -130,6 +151,45 @@ export default function ReviewerScreen({ onMessage, refreshKey }: ReviewerScreen
                 ))}
               </ol>
             </div>
+            <section className="advisory-section" aria-label="Review advisory">
+              <div className="advisory-heading">
+                <div>
+                  <h4>Advisory agent</h4>
+                  <p>Rules-based review support only. It does not recommend or make a decision.</p>
+                </div>
+                <button className="secondary" onClick={handleGenerateAdvisory} disabled={advisoryLoading}>
+                  {advisoryLoading ? 'Analyzing...' : 'Generate advisory'}
+                </button>
+              </div>
+              {advisoryError && <p className="advisory-error" role="alert">{advisoryError}</p>}
+              {advisory && (
+                <div className="advisory-results" aria-live="polite">
+                  <p className="advisory-summary">{advisory.advisory.summary}</p>
+                  <p className="advisory-notice">{advisory.notice}</p>
+                  <h5>Observations</h5>
+                  <ul>
+                    {advisory.advisory.observations.map((observation) => <li key={observation}>{observation}</li>)}
+                  </ul>
+                  <h5>Questions to verify</h5>
+                  <ul>
+                    {advisory.advisory.questions.map((question) => <li key={question}>{question}</li>)}
+                  </ul>
+                  {advisory.possibleDuplicates.length > 0 && (
+                    <>
+                      <h5>Possible duplicate requests</h5>
+                      <ul>
+                        {advisory.possibleDuplicates.map((duplicate) => (
+                          <li key={duplicate.requestReference}>
+                            <strong>{duplicate.requestReference}</strong> ({duplicate.status}): {duplicate.reason}
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                  <small>Method: {advisory.engine} · {new Date(advisory.generatedAt).toLocaleString()}</small>
+                </div>
+              )}
+            </section>
             {selectedRequest.status === 'New' && <button onClick={handleStartReview}>Start review</button>}
             {selectedRequest.status === 'InReview' && (
               <div className="decision-form">

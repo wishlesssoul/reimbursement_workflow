@@ -93,7 +93,7 @@ For an implementation-ready build, the recommended stack is:
 - Authentication: JWT-based auth with ASP.NET Identity or equivalent role-based auth layer
 - Logging and observability: structured JSON logs, request correlation IDs, centralized log sink
 - Deployment: Docker + CI/CD pipeline with staging and production promotion
-- Optional AI layer: agentic assistant for duplicate-risk analysis and request summarization, but only advisory and never final decision-maker
+- Optional advisory layer: a Python rules agent for duplicate-risk analysis and request summarization; advisory only and never the final decision-maker
 
 This stack is suitable for the project scope and provides strong transaction support, role-based access control, and straightforward deployment.
 
@@ -117,7 +117,7 @@ flowchart TB
         API[Backend API Service]
         RBAC[Role-based Access Control]
         WORKFLOW[Workflow Engine / State Validation]
-        AI[Optional AI Assistant Agent]
+        AI[Python Rules Advisory Agent]
     end
 
     subgraph DataTier
@@ -594,32 +594,31 @@ For production, use:
 
 ## 13. Agentification and AI-assisted workflow
 
-Although the requirement does not require full autonomous operation, the assignment permits AI tools and encourages them for workflow support. A practical approach is to include an optional agentic layer that augments the system without replacing human accountability.
+The POC includes a deterministic Python agent that coordinates read-only checks and augments the reviewer workflow without replacing human accountability. It uses Python's standard library and does not call an LLM or train a predictive model.
 
 ### 13.1 Agent responsibilities
 
-The AI-assisted layer can support:
+The advisory agent supports:
 
-- duplicate detection by comparing similar request text and values
-- summarization of request history for reviewers
-- extraction of key facts from customer submissions
-- detection of missing or ambiguous details before review
-- suggestions for risk flags or policy questions in the reviewer UI
+- checking required request details and flagging brief descriptions
+- summarizing the request status and recorded history
+- comparing recent requests for the same customer against explicit amount, date, and description-similarity rules
+- presenting verification questions to the reviewer
 
 ### 13.2 Human-in-the-loop design
 
-Important: the AI layer should never directly approve or decline reimbursement requests. Humans remain responsible for the final decision. The AI agent can provide suggestions only.
+The agent never directly approves, declines, or requests more information. It does not assign a score or claim policy rules. Humans remain responsible for verifying the facts and making the final decision.
 
 This reduces risk and aligns with the business requirement that reviewers make the actual decision manually.
 
 ### 13.3 Example agent-assisted workflow
 
-1. customer submits reimbursement request
-2. AI agent checks whether this request is similar to existing ones
-3. backend records a duplicate-risk score or warning
-4. reviewer sees the summary and suggestions
-5. reviewer confirms or overrides the recommendation
-6. final decision persists in the audit log with reviewer attribution
+1. customer submits a reimbursement request
+2. reviewer requests an advisory from the reviewer screen
+3. the reviewer module reads request facts, review history, and recent same-customer requests
+4. the Python agent applies deterministic completeness and similarity checks and returns observations and questions
+5. the reviewer verifies the source records and makes a decision through the existing workflow
+6. only the reviewer decision is persisted in the audit log
 
 ### 13.4 Why this improves the product
 
@@ -1184,6 +1183,8 @@ The backend should expose a compact but complete set of routes.
   - fetches detailed request and history
 - POST /api/reviewer/requests/:id/start
   - moves a New request to InReview using an optimistic version check
+- POST /api/reviewer/requests/:id/advisory
+  - returns a non-binding Python rules advisory for reviewers; does not change request state
 - POST /api/reviewer/requests/:id/review
   - approve, decline, or request more info
 
@@ -1312,6 +1313,7 @@ The local POC implements and tests customer submission, duplicate detection, ref
 ### Backend source organization
 
 - `backend/src/modules/` contains feature-owned routes and logic. Authentication, requests, reviewer workflow, and admin functionality each have their own module; demo seed logic and data belong to the admin module.
+- `backend/src/agents/reimbursementAdvisory/` contains the Python rules agent and its Node subprocess adapter.
 - `backend/src/shared/` contains cross-cutting infrastructure such as configuration, database setup, middleware, and the shared workflow read cache.
 - `backend/src/utils/` contains reusable request and workflow helpers without feature ownership.
 
@@ -1322,4 +1324,4 @@ Local operational substitutes are intentionally lightweight:
 - JSON request and workflow logs include generated correlation IDs, but no centralized log sink, tracing backend, or alerting is configured.
 - CI runs backend tests, the frontend build, and Playwright browser tests. Deployment promotion to staging/production remains environment-specific and is not configured here.
 
-The AI assistant remains optional and is not implemented because no inference provider or approved model access is configured. It must remain advisory if added. Production identity hardening, secure-cookie refresh storage, external notifications, load testing, PostgreSQL migration, full admin user management, and operational monitoring UI remain outside this local POC.
+The Python advisory agent is implemented as deterministic rules, not a trained model or LLM; its duplicate checks are limited to the most recent same-customer requests and require reviewer verification. Production identity hardening, secure-cookie refresh storage, external notifications, load testing, PostgreSQL migration, full admin user management, and operational monitoring UI remain outside this local POC.

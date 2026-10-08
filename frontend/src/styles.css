@@ -418,6 +418,81 @@ button.secondary:hover {
   min-width: 160px;
 }
 
+.advisory-section {
+  margin-top: 20px;
+  padding-top: 17px;
+  border-top: 1px solid #e3eae4;
+}
+
+.advisory-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.advisory-heading h4 {
+  margin: 0 0 5px;
+  color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.08rem;
+}
+
+.advisory-heading p,
+.advisory-results p,
+.advisory-results li,
+.advisory-results small,
+.advisory-error {
+  color: var(--muted);
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
+
+.advisory-heading p,
+.advisory-results p,
+.advisory-error {
+  margin: 0;
+}
+
+.advisory-heading button {
+  margin: 0;
+}
+
+.advisory-results {
+  display: grid;
+  gap: 9px;
+  margin-top: 15px;
+}
+
+.advisory-results .advisory-summary {
+  color: var(--ink);
+  font-weight: 650;
+}
+
+.advisory-results .advisory-notice {
+  padding-left: 10px;
+  border-left: 3px solid #d99b47;
+}
+
+.advisory-results h5 {
+  margin: 5px 0 0;
+  color: #35483d;
+  font-size: 0.9rem;
+}
+
+.advisory-results ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding-left: 19px;
+}
+
+.advisory-error {
+  margin-top: 12px;
+  color: #9c342d;
+}
+
 .admin-users-panel {
   margin-top: 22px;
 }

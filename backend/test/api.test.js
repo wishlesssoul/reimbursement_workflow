@@ -8,11 +8,39 @@ const testDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'reimbursement-tests
 process.env.DB_PATH = path.join(testDirectory, 'test.db');
 process.env.JWT_SECRET = 'test-only-secret';
 
-const [{ default: app }, { seedDatabase }, { default: db }] = await Promise.all([
+const [{ default: app }, { seedDatabase }, { default: db }, advisoryAgent] = await Promise.all([
   import('../src/app.js'),
   import('../src/modules/admin/seedService.js'),
   import('../src/shared/db.js'),
+  import('../src/agents/reimbursementAdvisory/index.js'),
 ]);
+
+test('Python advisory agent flags near duplicates without making an outcome recommendation', async () => {
+  const result = await advisoryAgent.generateReviewAdvisory({
+    request: {
+      reference: 'REQ-NEW',
+      customerReference: 'CUST-1001',
+      expenseDate: '2026-10-07',
+      amountInr: 1200,
+      description: 'Travel to a customer meeting',
+      status: 'New',
+    },
+    history: [],
+    priorDecisions: [],
+    candidates: [{
+      request_reference: 'REQ-OLD',
+      expense_date: '2026-10-07',
+      amount_inr: 1200,
+      description: 'Travel to customer meeting',
+      status: 'Approved',
+    }],
+  });
+
+  assert.equal(result.engine, 'python-rules-v1');
+  assert.equal(result.possibleDuplicates[0].requestReference, 'REQ-OLD');
+  assert.match(result.possibleDuplicates[0].reason, /same customer reference, expense date, and amount/i);
+  assert.equal('decision' in result, false);
+});
 
 let server;
 let baseUrl;
@@ -159,6 +187,38 @@ test('health, authentication, and role authorization', async (t) => {
     assert.ok(response.body.users.some((user) => user.email === 'admin@example.com'));
     assert.ok(response.body.users.every((user) => !('password_hash' in user)));
   });
+});
+
+test('reviewer advisory is role protected and leaves workflow state unchanged', async () => {
+  const readWorkflowState = () => db.prepare(`
+    SELECT status, version,
+      (SELECT COUNT(*) FROM review_decisions WHERE request_id = requests.id) AS decision_count,
+      (SELECT COUNT(*) FROM request_events WHERE request_id = requests.id) AS event_count
+    FROM requests WHERE id = ?
+  `).get('REQ-000103');
+  const before = readWorkflowState();
+
+  const unauthorized = await request('/api/reviewer/requests/REQ-000103/advisory', {
+    method: 'POST', token: tokens.customer,
+  });
+  const missing = await request('/api/reviewer/requests/REQ-NOT-FOUND/advisory', {
+    method: 'POST', token: tokens.reviewer,
+  });
+  const advisory = await request('/api/reviewer/requests/REQ-000103/advisory', {
+    method: 'POST', token: tokens.reviewer,
+  });
+
+  assert.equal(unauthorized.status, 403);
+  assert.equal(missing.status, 404);
+  assert.equal(advisory.status, 200);
+  assert.equal(advisory.body.engine, 'python-rules-v1');
+  assert.match(advisory.body.advisory.summary, /REQ-000103 is in MoreInformationRequested/);
+  assert.ok(advisory.body.advisory.questions.some((question) => question.includes('requested customer information')));
+  assert.equal(advisory.body.notice.includes('reviewer makes the decision'), true);
+  assert.equal(readWorkflowState().status, before.status);
+  assert.equal(readWorkflowState().version, before.version);
+  assert.equal(readWorkflowState().decision_count, before.decision_count);
+  assert.equal(readWorkflowState().event_count, before.event_count);
 });
 
 test('customer request submission, duplicate detection, and ownership', async (t) => {

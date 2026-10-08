@@ -4,8 +4,68 @@ import { requireAuth, requireRole } from '../../shared/middleware/auth.js';
 import { cacheWorkflowRead, getCachedWorkflowRead, invalidateWorkflowReads } from '../../shared/services/workflowReadCache.js';
 import { logEvent } from '../../shared/middleware/observability.js';
 import { isValidRequestVersion } from '../../utils/workflowUtils.js';
+import { AdvisoryAgentError, generateReviewAdvisory } from '../../agents/reimbursementAdvisory/index.js';
 
 const router = express.Router();
+
+router.post('/requests/:id/advisory', requireAuth, requireRole('Reviewer', 'Admin'), async (req, res) => {
+  const request = db.prepare('SELECT * FROM requests WHERE id = ?').get(req.params.id);
+
+  if (!request) {
+    return res.status(404).json({ message: 'Request not found.' });
+  }
+
+  const events = db.prepare('SELECT event_type, metadata, created_at FROM request_events WHERE request_id = ? ORDER BY created_at ASC').all(request.id);
+  const decisions = db.prepare('SELECT decision_type, explanation, created_at FROM review_decisions WHERE request_id = ? ORDER BY created_at ASC').all(request.id);
+  const candidates = db.prepare(`
+    SELECT request_reference, expense_date, amount_inr, description, status
+    FROM requests
+    WHERE id != ? AND customer_reference = ?
+    ORDER BY created_at DESC
+    LIMIT 20
+  `).all(request.id, request.customer_reference);
+
+  try {
+    const result = await generateReviewAdvisory({
+      request: {
+        reference: request.request_reference,
+        customerReference: request.customer_reference,
+        expenseDate: request.expense_date,
+        amountInr: request.amount_inr,
+        description: request.description,
+        status: request.status,
+      },
+      history: events,
+      priorDecisions: decisions,
+      candidates,
+    });
+
+    logEvent('review.advisory.generated', {
+      correlationId: req.correlationId,
+      requestId: request.id,
+      reviewerId: req.user.id,
+      engine: result.engine,
+    });
+
+    return res.json({
+      ...result,
+      generatedAt: new Date().toISOString(),
+      notice: 'Rules-based advisory only. Verify these details against source records; the reviewer makes the decision.',
+    });
+  } catch (error) {
+    logEvent('review.advisory.failed', {
+      correlationId: req.correlationId,
+      requestId: request.id,
+      reviewerId: req.user.id,
+      errorName: error.name,
+    });
+    const statusCode = error instanceof AdvisoryAgentError ? error.statusCode : 502;
+    const message = error instanceof AdvisoryAgentError
+      ? error.message
+      : 'The advisory could not be generated.';
+    return res.status(statusCode).json({ message });
+  }
+});
 
 router.post('/requests/:id/start', requireAuth, requireRole('Reviewer', 'Admin'), (req, res) => {
   const { version } = req.body || {};
