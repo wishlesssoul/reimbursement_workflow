@@ -1,9 +1,9 @@
 import express from 'express';
-import db from '../db.js';
-import { requireAuth, requireRole } from '../middleware/auth.js';
-import { cacheWorkflowRead, getCachedWorkflowRead, invalidateWorkflowReads } from '../services/workflowReadCache.js';
-import { logEvent } from '../middleware/observability.js';
-import { isValidRequestVersion } from '../utils/workflowUtils.js';
+import db from '../../shared/db.js';
+import { requireAuth, requireRole } from '../../shared/middleware/auth.js';
+import { cacheWorkflowRead, getCachedWorkflowRead, invalidateWorkflowReads } from '../../shared/services/workflowReadCache.js';
+import { logEvent } from '../../shared/middleware/observability.js';
+import { isValidRequestVersion } from '../../utils/workflowUtils.js';
 
 const router = express.Router();
 

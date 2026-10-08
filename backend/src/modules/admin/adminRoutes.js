@@ -1,7 +1,7 @@
 import express from 'express';
-import db from '../db.js';
-import { requireAuth, requireRole } from '../middleware/auth.js';
-import { seedDatabase } from '../services/seedService.js';
+import db from '../../shared/db.js';
+import { requireAuth, requireRole } from '../../shared/middleware/auth.js';
+import { seedDatabase } from './seedService.js';
 
 const router = express.Router();
 

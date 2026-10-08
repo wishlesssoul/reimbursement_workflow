@@ -10,8 +10,8 @@ process.env.JWT_SECRET = 'test-only-secret';
 
 const [{ default: app }, { seedDatabase }, { default: db }] = await Promise.all([
   import('../src/app.js'),
-  import('../src/services/seedService.js'),
-  import('../src/db.js'),
+  import('../src/modules/admin/seedService.js'),
+  import('../src/shared/db.js'),
 ]);
 
 let server;

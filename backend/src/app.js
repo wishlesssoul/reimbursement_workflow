@@ -1,11 +1,11 @@
 import express from 'express';
 import cors from 'cors';
-import db from './db.js';
-import authRoutes from './routes/authRoutes.js';
-import requestRoutes from './routes/requestRoutes.js';
-import reviewerRoutes from './routes/reviewerRoutes.js';
-import adminRoutes from './routes/adminRoutes.js';
-import { requestContext, logEvent } from './middleware/observability.js';
+import db from './shared/db.js';
+import authRoutes from './modules/auth/authRoutes.js';
+import requestRoutes from './modules/requests/requestRoutes.js';
+import reviewerRoutes from './modules/reviewer/reviewerRoutes.js';
+import adminRoutes from './modules/admin/adminRoutes.js';
+import { requestContext, logEvent } from './shared/middleware/observability.js';
 
 const app = express();
 

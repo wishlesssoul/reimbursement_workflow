@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
-import db from '../db.js';
-import { seedUsers, seedRequests, seedDecisions, seedEvents } from '../data/seedData.js';
-import { createDedupeHash } from '../utils/requestUtils.js';
+import db from '../../shared/db.js';
+import { seedUsers, seedRequests, seedDecisions, seedEvents } from './seedData.js';
+import { createDedupeHash } from '../../utils/requestUtils.js';
 
 export function seedDatabase() {
   const existingUserCount = db.prepare('SELECT COUNT(*) AS count FROM users').get().count;

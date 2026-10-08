@@ -1,6 +1,6 @@
 import app from './app.js';
-import { config } from './config.js';
-import { seedDatabase } from './services/seedService.js';
+import { config } from './shared/config.js';
+import { seedDatabase } from './modules/admin/seedService.js';
 
 seedDatabase();
 

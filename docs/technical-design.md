@@ -1309,6 +1309,12 @@ This ordering reduces risk and keeps the solution aligned with the business work
 
 The local POC implements and tests customer submission, duplicate detection, reference lookup and event history, reviewer status filtering, review start/decision transitions, customer responses, role checks, refresh-token rotation/revocation, and admin read-only user listing. SQLite data persistence is verified across backend process restarts.
 
+### Backend source organization
+
+- `backend/src/modules/` contains feature-owned routes and logic. Authentication, requests, reviewer workflow, and admin functionality each have their own module; demo seed logic and data belong to the admin module.
+- `backend/src/shared/` contains cross-cutting infrastructure such as configuration, database setup, middleware, and the shared workflow read cache.
+- `backend/src/utils/` contains reusable request and workflow helpers without feature ownership.
+
 Local operational substitutes are intentionally lightweight:
 
 - SQLite is used instead of the production-target PostgreSQL database.
